@@ -1,63 +1,101 @@
-import dash
-from dash import html
-from dash import dcc
-import plotly.graph_objs as go
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import Point
+import plotly.express as px
 
-########### Define your variables
-beers=['Chesapeake Stout', 'Snake Dog IPA', 'Imperial Porter', 'Double Dog IPA']
-ibu_values=[35, 60, 85, 75]
-abv_values=[5.4, 7.1, 9.2, 4.3]
-color1='darkred'
-color2='orange'
-mytitle='Beer Comparison'
-tabtitle='beer!'
-myheading='Flying Dog Beers'
-label1='IBU'
-label2='ABV'
-githublink='https://github.com/austinlasseter/flying-dog-beers'
-sourceurl='https://www.flyingdog.com/beers/'
+from os import listdir
+from os.path import isfile, join
 
-########### Set up the chart
-bitterness = go.Bar(
-    x=beers,
-    y=ibu_values,
-    name=label1,
-    marker={'color':color1}
+from dash import *
+
+def import_gdf(filename, folderPath = '../Addresses/'):
+
+    df = pd.read_csv(f'{folderPath}{filename}', sep=';', header = None)
+    df.columns = ['name', 'nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent', 'lon', 'lat']
+    df = df.sort_values(by='nIn', ignore_index=True)
+
+    # Convert df with lat lon to gdf
+    geom = [Point(xy) for xy in zip(df.lon, df.lat)]
+    df = df.drop(columns= ['lon', 'lat'])
+    outgdf = gpd.GeoDataFrame(df, crs="EPSG:4326", geometry=geom)
+
+    return outgdf
+
+def build_gdb(folderPath = '../Addresses/'):
+
+    onlyfiles = [f for f in listdir(folderPath) if isfile(join(folderPath, f))]
+
+    start = "Addresses"
+    end = ".txt"
+    dictgdf = {}
+    for f in onlyfiles:
+        n = int( f[len(start):-len(end)] )
+        dictgdf[n] = import_gdf(f, folderPath)
+
+    sortedgdb = dict(sorted(dictgdf.items()))
+    return sortedgdb
+
+
+addressesGDB = build_gdb('Addresses/')
+nCycles = len(addressesGDB)
+
+# Initialize the app
+app = Dash(__name__)
+
+# App layout
+app.layout = html.Div([
+    html.Div(children='Select a cycle number on the numberline or the input cell below.'),
+    html.Hr(),
+    dcc.Slider(min=0, max=nCycles-1, step=1, value=0, id='cycle-slider'),
+    html.Div(dcc.Input(id='input-cycle', type='number', placeholder=0)),
+    dcc.Graph(figure={}, id='map'),
+    
+    html.Div(children='Select which attribute to represent by which symbology feature.'),
+    html.Hr(),
+    html.Div([
+        html.Label('Circle size', style={'padding-right': '62px'}),
+        html.Label('Circle color')
+    ]),
+    dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nCommuters', id='size-radio', style={'display': 'inline-block', 'padding-right':'28px'}),
+    dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nIn', id='color-radio', style={'display': 'inline-block'})
+])
+
+# Interactive map
+@callback(
+    Output(component_id='map', component_property='figure'),
+    Input(component_id='cycle-slider', component_property='value'),
+    Input('size-radio', 'value'),
+    Input('color-radio', 'value')
 )
-alcohol = go.Bar(
-    x=beers,
-    y=abv_values,
-    name=label2,
-    marker={'color':color2}
+def update_graph(cycleNo, sizefield, colorfield):    
+    gdf = addressesGDB[cycleNo]
+    fig = px.scatter_mapbox(gdf, lat= gdf.geometry.y, lon= gdf.geometry.x, color= colorfield, size= sizefield, zoom= 11)
+    fig.update_layout(mapbox_style="open-street-map")
+    return fig
+
+
+@callback(
+    Output('cycle-slider', 'value'),
+    Input('input-cycle', 'value')
 )
+def matchSliderToInput(n):
+    if n is not None:
+        return n
+    else:
+        return 0
+    
 
-beer_data = [bitterness, alcohol]
-beer_layout = go.Layout(
-    barmode='group',
-    title = mytitle
+@callback(
+    Output('input-cycle', 'value'),
+    Input('cycle-slider', 'value') 
 )
+def matchInputToSlider(n):
+    if n is not None:
+        return n
+    else:
+        return 0
 
-beer_fig = go.Figure(data=beer_data, layout=beer_layout)
-
-
-########### Initiate the app
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-server = app.server
-app.title=tabtitle
-
-########### Set up the layout
-app.layout = html.Div(children=[
-    html.H1(myheading),
-    dcc.Graph(
-        id='flyingdog',
-        figure=beer_fig
-    ),
-    html.A('Code on Github', href=githublink),
-    html.Br(),
-    html.A('Data Source', href=sourceurl),
-    ]
-)
-
+# Run the app
 if __name__ == '__main__':
-    app.run_server()
+    app.run(debug=True)
+
