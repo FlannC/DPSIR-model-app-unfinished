@@ -1,6 +1,4 @@
 import pandas as pd
-import geopandas as gpd
-from shapely.geometry import Point
 import plotly.express as px
 
 from os import listdir
@@ -15,9 +13,12 @@ def import_gdf(filename, folderPath = '../Addresses/'):
     df = df.sort_values(by='nIn', ignore_index=True)
 
     # Convert df with lat lon to gdf
-    geom = [Point(xy) for xy in zip(df.lon, df.lat)]
-    df = df.drop(columns= ['lon', 'lat'])
-    outgdf = gpd.GeoDataFrame(df, crs="EPSG:4326", geometry=geom)
+    # geom = [Point(xy) for xy in zip(df.lon, df.lat)]
+    # df = df.drop(columns= ['lon', 'lat'])
+    # outgdf = gpd.GeoDataFrame(df, crs="EPSG:4326", geometry=geom)
+
+    # Version without gpd
+    outgdf = df
 
     return outgdf
 
@@ -70,7 +71,7 @@ myapp.layout = html.Div([
 )
 def update_graph(cycleNo, sizefield, colorfield):    
     gdf = addressesGDB[cycleNo]
-    fig = px.scatter_mapbox(gdf, lat= gdf.geometry.y, lon= gdf.geometry.x, color= colorfield, size= sizefield, zoom= 11)
+    fig = px.scatter_mapbox(gdf, lat= gdf.lat, lon= gdf.lon, color= colorfield, size= sizefield, zoom= 11)
     fig.update_layout(mapbox_style="open-street-map")
     return fig
 
