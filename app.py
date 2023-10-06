@@ -40,10 +40,11 @@ addressesGDB = build_gdb('Addresses/')
 nCycles = len(addressesGDB)
 
 # Initialize the app
-app = Dash(__name__)
+myapp = Dash(__name__)
+app = myapp.server
 
 # App layout
-app.layout = html.Div([
+myapp.layout = html.Div([
     html.Div(children='Select a cycle number on the numberline or the input cell below.'),
     html.Hr(),
     dcc.Slider(min=0, max=nCycles-1, step=1, value=0, id='cycle-slider'),
@@ -97,5 +98,5 @@ def matchInputToSlider(n):
 
 # Run the app
 if __name__ == '__main__':
-    app.run(debug=True)
+    myapp.run(debug=True)
 
