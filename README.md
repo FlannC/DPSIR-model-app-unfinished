@@ -10,4 +10,4 @@ To update the app with new data:
 4. git commit -m 'Your message'
 5. git push origin main
 
-Azure should automatically register the changes to the github repo and reload the app. To check, go to the Azure dashboard.
+Azure should automatically register the changes to the github repo and reload the app. To check, go to the Azure dashboard, or check under the Deployments tab directly on the github repo.
