@@ -46,7 +46,9 @@ allCyclesGDF = merge_all_cycles(addressesGDB)
 
 # Initialize the app
 myapp = Dash(__name__)
+myapp.title = 'DPSIR model'
 app = myapp.server
+
 
 # App layout
 myapp.layout = html.Div([
