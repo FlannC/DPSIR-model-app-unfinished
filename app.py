@@ -58,11 +58,15 @@ myapp.layout = html.Div([
     html.Div([
         html.Div([
             html.Div([
-                html.Label('Circle size'),
+                html.Div(
+                    html.Label(html.B('Circle size')), style = {'padding-bottom': '6px'}
+                ),                
                 dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nCommuters', id='size-radio')
-            ]),
+            ], style= {'padding-right':'20px'}),
             html.Div([
-                html.Label('Circle color'),
+                html.Div(
+                    html.Label(html.B('Circle color')), style = {'padding-bottom': '6px'}
+                ),   
                 dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nIn', id='color-radio')
             ])
             
