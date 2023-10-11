@@ -6,7 +6,7 @@ from os.path import isfile, join
 
 from dash import *
 
-def import_gdf(filename, folderPath = '../Addresses/'):
+def import_gdf(filename, folderPath = 'Addresses/'):
 
     df = pd.read_csv(f'{folderPath}{filename}', sep=';', header = None)
     df.columns = ['name', 'nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent', 'lon', 'lat']
@@ -22,7 +22,7 @@ def import_gdf(filename, folderPath = '../Addresses/'):
 
     return outgdf
 
-def build_gdb(folderPath = '../Addresses/'):
+def build_gdb(folderPath = 'Addresses/'):
 
     onlyfiles = [f for f in listdir(folderPath) if isfile(join(folderPath, f))]
 
@@ -37,7 +37,7 @@ def build_gdb(folderPath = '../Addresses/'):
     return sortedgdb
 
 
-addressesGDB = build_gdb('Addresses/')
+addressesGDB = build_gdb()
 nCycles = len(addressesGDB)
 
 # Initialize the app
