@@ -10,17 +10,9 @@ def import_gdf(filename, folderPath = 'Addresses/'):
 
     df = pd.read_csv(f'{folderPath}{filename}', sep=';', header = None)
     df.columns = ['name', 'nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent', 'lon', 'lat']
-    df = df.sort_values(by='nIn', ignore_index=True)
+    outdf = df.sort_values(by='nIn', ignore_index=True)
 
-    # Convert df with lat lon to gdf
-    # geom = [Point(xy) for xy in zip(df.lon, df.lat)]
-    # df = df.drop(columns= ['lon', 'lat'])
-    # outgdf = gpd.GeoDataFrame(df, crs="EPSG:4326", geometry=geom)
-
-    # Version without gpd
-    outgdf = df
-
-    return outgdf
+    return outdf
 
 def build_gdb(folderPath = 'Addresses/'):
 
@@ -36,9 +28,21 @@ def build_gdb(folderPath = 'Addresses/'):
     sortedgdb = dict(sorted(dictgdf.items()))
     return sortedgdb
 
+def merge_all_cycles(ingdb):
+    for i in ingdb:
+        gdf = ingdb[i]
+        gdf['cycleNo'] = i
+        if i == 0:
+            outgdf = gdf
+        else:
+            outgdf = pd.concat([outgdf, gdf], ignore_index=True)
+    
+    return outgdf
+
 
 addressesGDB = build_gdb()
 nCycles = len(addressesGDB)
+allCyclesGDF = merge_all_cycles(addressesGDB)
 
 # Initialize the app
 myapp = Dash(__name__)
@@ -46,21 +50,41 @@ app = myapp.server
 
 # App layout
 myapp.layout = html.Div([
-    html.Div(children='Select a cycle number on the numberline or the input cell below.'),
+    html.Div(children='Select a cycle number on the numberline or the input cell below.', style={'padding-bottom':'16px'}),
+    dcc.Slider(min=0, max=nCycles-1, step=1, value=0, marks= {i:str(i) if i%(round(nCycles/200)*10) == 0 else '' for i in range(nCycles)}, id='cycle-slider'),
+    html.Div(dcc.Input(id='input-cycle', type='number', placeholder=0, style= {'margin-bottom': '16px'})),
     html.Hr(),
-    dcc.Slider(min=0, max=nCycles-1, step=1, value=0, id='cycle-slider'),
-    html.Div(dcc.Input(id='input-cycle', type='number', placeholder=0)),
-    dcc.Graph(figure={}, id='map'),
-    
     html.Div(children='Select which attribute to represent by which symbology feature.'),
-    html.Hr(),
     html.Div([
-        html.Label('Circle size', style={'padding-right': '62px'}),
-        html.Label('Circle color')
-    ]),
-    dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nCommuters', id='size-radio', style={'display': 'inline-block', 'padding-right':'28px'}),
-    dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nIn', id='color-radio', style={'display': 'inline-block'})
+        html.Div([
+            html.Div([
+                html.Label('Circle size'),
+                dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nCommuters', id='size-radio')
+            ]),
+            html.Div([
+                html.Label('Circle color'),
+                dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent'], value='nIn', id='color-radio')
+            ])
+            
+        ], style= {'display':'flex', 'padding-top': '100px'}),
+        html.Div(
+            dcc.Graph(figure={}, id='map')
+        )
+    ], style= {'display':'flex'}),
+    html.Hr(),
+    html.Div(children='Click on an address on the map and select which attribute to plot on the y axis.'),
+    html.Div([
+        html.Div(
+            dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut'], value='nCommuters', id='plot-radio'),    
+            style={'display': 'inline-block', 'padding-top': '100px'}
+        ),
+        html.Div(
+        dcc.Graph(figure={}, id='plot', style= {'margin': '0px'}),
+        style={'display': 'inline-block'}
+        )
+    ], style= {'display':'flex'})
 ])
+
 
 # Interactive map
 @callback(
@@ -69,11 +93,34 @@ myapp.layout = html.Div([
     Input('size-radio', 'value'),
     Input('color-radio', 'value')
 )
-def update_graph(cycleNo, sizefield, colorfield):    
+def update_map(cycleNo, sizefield, colorfield):    
     gdf = addressesGDB[cycleNo]
-    fig = px.scatter_mapbox(gdf, lat= gdf.lat, lon= gdf.lon, color= colorfield, size= sizefield, zoom= 11)
-    fig.update_layout(mapbox_style="open-street-map")
-    return fig
+    fig_map = px.scatter_mapbox(gdf, lat= gdf.lat, lon= gdf.lon, hover_name='name', color= colorfield, size= sizefield, zoom= 11)
+    fig_map.update_layout(mapbox_style="open-street-map")
+    return fig_map
+
+# Interactive plot
+@callback(
+    Output(component_id='plot', component_property='figure'),    
+    Input('plot-radio', 'value'),
+    Input('map', 'clickData')
+)
+def update_plot(yfield, clickdata):
+    address = clickdata['points'][0]['hovertext']
+    xdata = allCyclesGDF[allCyclesGDF.name == address]['cycleNo']
+    ydata = allCyclesGDF[allCyclesGDF.name == address][yfield]
+    rent = allCyclesGDF[allCyclesGDF.name == address]['rent'].reset_index(drop=True)[0]
+    n= address[9:]
+
+    fig_plot = px.scatter(x= xdata, y=ydata, title=f'Graph of {yfield} for address number {n}, rent is {rent}.')
+    fig_plot.update_traces(mode='lines+markers')
+
+    fig_plot.update_xaxes(title= "Cycle") 
+    fig_plot.update_yaxes(title= yfield)
+    fig_plot.update() 
+
+    return fig_plot
+
 
 
 @callback(
