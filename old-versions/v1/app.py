@@ -39,7 +39,7 @@ def merge_all_cycles(ingdb):
     return outgdf
 
 addressesCols = ['name', 'nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent', 'lon', 'lat']
-commutersCols = ['name', 'home', 'jobPlace', 'maxRent', 'travelTime', 'happy', 'patience', 'initialPatience', 'homeLon', 'homeLat']
+commutersCols = ['name', 'home', 'jobPlace', 'maxRent', 'travelTime', 'happy', 'patience', 'homeLon', 'homeLat']
 addressesGDB = build_gdb('Addresses/', 'Addresses', addressesCols, 'nIn')
 commutersGDB = build_gdb('Commuters/', 'Commuters', commutersCols, 'travelTime')
 nCycles = len(addressesGDB)
@@ -55,35 +55,12 @@ app = myapp.server
 
 # App layout
 myapp.layout = html.Div([
-    html.Div(children="ADDRESSES - Select attribute to plot its means' time series on the y axis."),
-    html.Div([
-        html.Div(
-            dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut'], value='nIn', id='means-radio-a'),    
-            style={'display': 'inline-block', 'padding-top': '100px'}
-        ),
-        html.Div(
-        dcc.Graph(figure={}, id='means-a', style= {'margin': '0px'}),
-        style={'display': 'inline-block'}
-        )
-    ], style= {'display':'flex'}),
-    
+    html.Div(children='Select a cycle number on the numberline or the input cell below.', style={'padding-bottom':'16px'}),
+    # dcc.Slider(min=0, max=nCycles-1, step=1, value=0, marks= {i:str(i) if i%(round(nCycles/200)*10) == 0 else '' for i in range(nCycles)}, id='cycle-slider'),
+    dcc.Slider(min=0, max=nCycles-1, step=1, value=0, id='cycle-slider'),
+    html.Div(dcc.Input(id='input-cycle', type='number', placeholder=0, style= {'margin-bottom': '16px'})),
     html.Hr(),
-
-    html.Div(children='Click on an address on the map below and select which attribute to plot on the y axis.'),
-    html.Div([
-        html.Div(
-            dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut'], value='nCommuters', id='plot-radio'),    
-            style={'display': 'inline-block', 'padding-top': '100px'}
-        ),
-        html.Div(
-        dcc.Graph(figure={}, id='plot', style= {'margin': '0px'}),
-        style={'display': 'inline-block'}
-        )
-    ], style= {'display':'flex'}),
-
-    html.Hr(),
-
-    html.Div(children='Select which attribute to represent by which symbology feature.'),
+    html.Div(children='Select which attribute to represent by which symbology feature - Addresses.'),
     html.Div([
         html.Div([
             html.Div([
@@ -105,17 +82,35 @@ myapp.layout = html.Div([
         )
     ], style= {'display':'flex'}),
     html.Hr(),
-
-    
-
-    html.Div(children='Select a cycle number on the numberline or the input cell below.', style={'padding-bottom':'16px'}),
-    # dcc.Slider(min=0, max=nCycles-1, step=1, value=0, marks= {i:str(i) if i%(round(nCycles/200)*10) == 0 else '' for i in range(nCycles)}, id='cycle-slider'),
-    dcc.Slider(min=0, max=nCycles-1, step=1, value=0, id='cycle-slider'),
-    html.Div(dcc.Input(id='input-cycle', type='number', placeholder=0, style= {'margin-bottom': '16px'})),
+    html.Div(children='Click on an address on the map and select which attribute to plot on the y axis.'),
+    html.Div([
+        html.Div(
+            dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut'], value='nCommuters', id='plot-radio'),    
+            style={'display': 'inline-block', 'padding-top': '100px'}
+        ),
+        html.Div(
+        dcc.Graph(figure={}, id='plot', style= {'margin': '0px'}),
+        style={'display': 'inline-block'}
+        )
+    ], style= {'display':'flex'}),
 
     html.Hr(),
+    html.Div(children="Select attribute to plot its means' time series on the y axis."),
+    html.Div([
+        html.Div(
+            dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut'], value='nIn', id='means-radio-a'),    
+            style={'display': 'inline-block', 'padding-top': '100px'}
+        ),
+        html.Div(
+        dcc.Graph(figure={}, id='means-a', style= {'margin': '0px'}),
+        style={'display': 'inline-block'}
+        )
+    ], style= {'display':'flex'}),
+    
+    html.Hr(),
+    html.Hr(),
 
-    html.Div(children='COMMUTERS - Select which attribute to represent by which symbology feature.'),
+    html.Div(children='Select which attribute to represent by which symbology feature - Commuters.'),
     html.Div([
         html.Div([
             html.Div([
@@ -137,7 +132,7 @@ myapp.layout = html.Div([
         )
     ], style= {'display':'flex'}),
     html.Hr(),
-    html.Div(children='Click on a commuter on the map above and select which attribute to plot on the y axis.'),
+    html.Div(children='Click on a commuter on the map and select which attribute to plot on the y axis.'),
     html.Div([
         html.Div(
             dcc.RadioItems(options=['travelTime', 'happy', 'patience'], value='travelTime', id='plot-radio-c'),    
