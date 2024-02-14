@@ -39,7 +39,7 @@ def merge_all_cycles(ingdb):
     return outgdf
 
 addressesCols = ['name', 'nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut', 'rent', 'lon', 'lat']
-commutersCols = ['name', 'home', 'jobPlace', 'maxRent', 'travelTime', 'happy', 'patience', 'initialPatience', 'homeLon', 'homeLat']
+commutersCols = ['name', 'home', 'jobPlace', 'maxRent', 'travelTime', 'happy', 'patience', 'initialPatience', 'nRelocations', 'homeLon', 'homeLat']
 addressesGDB = build_gdb('Addresses/', 'Addresses', addressesCols, 'nIn')
 commutersGDB = build_gdb('Commuters/', 'Commuters', commutersCols, 'travelTime')
 nCycles = len(addressesGDB)
@@ -122,13 +122,13 @@ myapp.layout = html.Div([
                 html.Div(
                     html.Label(html.B('Circle size')), style = {'padding-bottom': '6px'}
                 ),                
-                dcc.RadioItems(options=['maxRent', 'travelTime', 'patience'], value='maxRent', id='size-radio-c')
+                dcc.RadioItems(options=['maxRent', 'travelTime', 'patience', 'nRelocations'], value='maxRent', id='size-radio-c')
             ], style= {'padding-right':'20px'}),
             html.Div([
                 html.Div(
                     html.Label(html.B('Circle color')), style = {'padding-bottom': '6px'}
                 ),   
-                dcc.RadioItems(options=['maxRent', 'travelTime', 'happy', 'patience'], value='travelTime', id='color-radio-c')
+                dcc.RadioItems(options=['maxRent', 'travelTime', 'happy', 'patience', 'nRelocations'], value='travelTime', id='color-radio-c')
             ])
             
         ], style= {'display':'flex', 'padding-top': '100px'}),
@@ -140,7 +140,7 @@ myapp.layout = html.Div([
     html.Div(children='Click on a commuter on the map above and select which attribute to plot on the y axis.'),
     html.Div([
         html.Div(
-            dcc.RadioItems(options=['travelTime', 'happy', 'patience'], value='travelTime', id='plot-radio-c'),    
+            dcc.RadioItems(options=['travelTime', 'happy', 'patience', 'nRelocations'], value='travelTime', id='plot-radio-c'),    
             style={'display': 'inline-block', 'padding-top': '100px'}
         ),
         html.Div(
@@ -151,15 +151,19 @@ myapp.layout = html.Div([
 
     html.Hr(),
     html.Div(children="Select attribute to plot its means' time series on the y axis."),
+    html.Div(children="Input below the proportion of commuters who relocate each year:"),
+    html.Div(
+            dcc.Input(id='input-val-percent', type='number', placeholder=0.071, style= {'margin-top': '8px'})
+        ),
     html.Div([
         html.Div(
-            dcc.RadioItems(options=['travelTime', 'happy', 'patience'], value='travelTime', id='means-radio-c'),    
+            dcc.RadioItems(options=['travelTime', 'happy', 'patience', 'nRelocations'], value='travelTime', id='means-radio-c'),    
             style={'display': 'inline-block', 'padding-top': '100px'}
         ),
         html.Div(
         dcc.Graph(figure={}, id='means-c', style= {'margin': '0px'}),
         style={'display': 'inline-block'}
-        )
+        )      
     ], style= {'display':'flex'})
 
 ])
@@ -281,12 +285,23 @@ def update_plot(yfield, clickdata):
 @callback(
     Output(component_id='means-c', component_property='figure'),    
     Input('means-radio-c', 'value'),
+    Input('input-val-percent', 'value')
 )
-def update_means(yfield):
+def update_means(yfield, valpercentage):
+    if valpercentage == None:
+        valpercentage = 0.071
     xdata = allCyclesCommutersGDF['cycleNo'].unique()
+    print(xdata)
     ydata = allCyclesCommutersGDF.groupby(['cycleNo']).mean()[yfield]
 
-    fig_plot = px.scatter(x= xdata, y=ydata, title=f'Graph of mean of {yfield} for all commuters.')
+    if yfield == 'nRelocations':
+        yvaldata = [((1+float(valpercentage))**(x/12) - 1) for x in xdata]
+    
+    fig_plot = px.scatter(title=f'Graph of mean of {yfield} for all commuters.')
+    fig_plot.add_scatter(x= xdata, y= ydata, name= 'Simulated data')
+    if yfield == 'nRelocations':
+        fig_plot.add_scatter(x= xdata, y= yvaldata, name= 'Validation data')
+        
     fig_plot.update_traces(mode='lines+markers')
 
     fig_plot.update_xaxes(title= "Cycle") 
@@ -294,8 +309,6 @@ def update_means(yfield):
     fig_plot.update() 
 
     return fig_plot
-
-
 
 
 # Run the app
