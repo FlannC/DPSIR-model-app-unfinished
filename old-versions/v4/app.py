@@ -46,8 +46,6 @@ nCycles = len(addressesGDB)
 allCyclesAddressesGDF = merge_all_cycles(addressesGDB)
 allCyclesCommutersGDF = merge_all_cycles(commutersGDB)
 
-with open('readme.txt', 'r') as f:
-    details = f.read()
 
 
 # Initialize the app
@@ -57,15 +55,7 @@ app = myapp.server
 
 # App layout
 myapp.layout = html.Div([
-    html.Div("Dataset details."),
-    dcc.Markdown(
-        details,
-        style={"white-space": "pre"}
-    ),
-
-    html.Hr(),
-
-    html.Div(children="Section A1 - Select addresses' attribute to plot its means' time series on the y axis."),
+    html.Div(children="ADDRESSES - Select attribute to plot its means' time series on the y axis."),
     html.Div([
         html.Div(
             dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut'], value='nIn', id='means-radio-a'),    
@@ -79,7 +69,7 @@ myapp.layout = html.Div([
     
     html.Hr(),
 
-    html.Div(children='Section A2 - Click on an address on the map below and select which attribute to plot on the y axis.'),
+    html.Div(children='Click on an address on the map below and select which attribute to plot on the y axis.'),
     html.Div([
         html.Div(
             dcc.RadioItems(options=['nCommuters', 'vacancies', 'newHomes', 'nIn', 'nOut'], value='nCommuters', id='plot-radio'),    
@@ -93,7 +83,7 @@ myapp.layout = html.Div([
 
     html.Hr(),
 
-    html.Div(children='Section A3 - Select which attribute to represent by which symbology feature.'),
+    html.Div(children='Select which attribute to represent by which symbology feature.'),
     html.Div([
         html.Div([
             html.Div([
@@ -118,14 +108,14 @@ myapp.layout = html.Div([
 
     
 
-    html.Div(children='Time control - Select a cycle number on the numberline or the input cell below.', style={'padding-bottom':'16px'}),
+    html.Div(children='Select a cycle number on the numberline or the input cell below.', style={'padding-bottom':'16px'}),
     # dcc.Slider(min=0, max=nCycles-1, step=1, value=0, marks= {i:str(i) if i%(round(nCycles/200)*10) == 0 else '' for i in range(nCycles)}, id='cycle-slider'),
     dcc.Slider(min=0, max=nCycles-1, step=1, value=0, id='cycle-slider'),
     html.Div(dcc.Input(id='input-cycle', type='number', placeholder=0, style= {'margin-bottom': '16px'})),
 
     html.Hr(),
 
-    html.Div(children="Section C1 - Select which commuters' attribute to represent by which symbology feature."),
+    html.Div(children='COMMUTERS - Select which attribute to represent by which symbology feature.'),
     html.Div([
         html.Div([
             html.Div([
@@ -147,7 +137,7 @@ myapp.layout = html.Div([
         )
     ], style= {'display':'flex'}),
     html.Hr(),
-    html.Div(children='Section C2 - Click on a commuter on the map above and select which attribute to plot on the y axis.'),
+    html.Div(children='Click on a commuter on the map above and select which attribute to plot on the y axis.'),
     html.Div([
         html.Div(
             dcc.RadioItems(options=['travelTime', 'happy', 'patience', 'nRelocations'], value='travelTime', id='plot-radio-c'),    
@@ -160,10 +150,10 @@ myapp.layout = html.Div([
     ], style= {'display':'flex'}),
 
     html.Hr(),
-    html.Div(children="Section C3 - Select attribute to plot its means' time series on the y axis."),
-    html.Div(children="Input below the amount of relocations per year, expressed in a fraction of total population:"),
+    html.Div(children="Select attribute to plot its means' time series on the y axis."),
+    html.Div(children="Input below the proportion of commuters who relocate each year:"),
     html.Div(
-            dcc.Input(id='input-val-percent', type='number', placeholder=0.096, style= {'margin-top': '8px'})
+            dcc.Input(id='input-val-percent', type='number', placeholder=0.071, style= {'margin-top': '8px'})
         ),
     html.Div([
         html.Div(
@@ -299,13 +289,13 @@ def update_plot(yfield, clickdata):
 )
 def update_means(yfield, valpercentage):
     if valpercentage == None:
-        valpercentage = 0.096
+        valpercentage = 0.071
     xdata = allCyclesCommutersGDF['cycleNo'].unique()
-    
+    print(xdata)
     ydata = allCyclesCommutersGDF.groupby(['cycleNo']).mean()[yfield]
 
     if yfield == 'nRelocations':
-        yvaldata = [valpercentage*x/12 for x in xdata]
+        yvaldata = [((1+float(valpercentage))**(x/12) - 1) for x in xdata]
     
     fig_plot = px.scatter(title=f'Graph of mean of {yfield} for all commuters.')
     fig_plot.add_scatter(x= xdata, y= ydata, name= 'Simulated data')
